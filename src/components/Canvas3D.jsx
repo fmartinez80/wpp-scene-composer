@@ -1,13 +1,21 @@
-import { useEffect, useRef } from 'react'
+import { useEffect, useRef, useImperativeHandle, forwardRef } from 'react'
 import * as THREE from 'three'
+import TransformGizmo from './TransformGizmo'
 
-const Canvas3D = ({ objects, selectedObjectId, onSelectObject }) => {
+const Canvas3D = forwardRef(({ objects, selectedObjectId, onSelectObject, onUpdateObject }, ref) => {
   const containerRef = useRef(null)
   const sceneRef = useRef(null)
+  const cameraRef = useRef(null)
   const rendererRef = useRef(null)
   const objectsRef = useRef(new Map())
   const raycasterRef = useRef(new THREE.Raycaster())
   const mouseRef = useRef(new THREE.Vector2())
+
+  // Expose refs to parent
+  useImperativeHandle(ref, () => ({
+    sceneRef,
+    cameraRef
+  }))
 
   const createObject = (type) => {
     let geometry, material, mesh
@@ -196,6 +204,7 @@ const Canvas3D = ({ objects, selectedObjectId, onSelectObject }) => {
     )
     camera.position.set(3, 3, 3)
     camera.lookAt(0, 0.5, 0)
+    cameraRef.current = camera
 
     // Renderer
     const renderer = new THREE.WebGLRenderer({ antialias: true, preserveDrawingBuffer: true })
@@ -345,7 +354,21 @@ const Canvas3D = ({ objects, selectedObjectId, onSelectObject }) => {
     }
   }, [selectedObjectId])
 
-  return <div ref={containerRef} className="canvas-3d" />
-}
+  return (
+    <>
+      <div ref={containerRef} className="canvas-3d" />
+      {selectedObjectId && sceneRef.current && cameraRef.current && (
+        <TransformGizmo
+          selectedObjectId={selectedObjectId}
+          objects={objects}
+          onUpdateObject={onUpdateObject}
+          sceneRef={sceneRef}
+          cameraRef={cameraRef}
+        />
+      )}
+    </>
+  )
+})
 
+Canvas3D.displayName = 'Canvas3D'
 export default Canvas3D

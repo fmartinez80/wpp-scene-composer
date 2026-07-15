@@ -81,6 +81,7 @@ function App() {
           objects={objects}
           selectedObjectId={selectedObjectId}
           onSelectObject={setSelectedObjectId}
+          onUpdateObject={updateObject}
         />
       </main>
 
