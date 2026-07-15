@@ -1,303 +1,213 @@
-import { useEffect, useRef, forwardRef } from 'react'
+import { useEffect, useRef } from 'react'
 import * as THREE from 'three'
 
-const Canvas3D = forwardRef(({ objects, selectedObject, cameraPreset, aspectRatio, onUpdateObject, tableSize }, ref) => {
+const Canvas3D = ({ objects, selectedObjectId, onSelectObject }) => {
   const containerRef = useRef(null)
   const sceneRef = useRef(null)
   const rendererRef = useRef(null)
-  const cameraRef = useRef(null)
-  const objectsRef = useRef({})
-  const labelsCanvasRef = useRef(null)
+  const objectsRef = useRef(new Map())
   const raycasterRef = useRef(new THREE.Raycaster())
   const mouseRef = useRef(new THREE.Vector2())
-  const draggedObjectRef = useRef(null)
-  const dragPlaneRef = useRef(null)
+
+  const createObject = (type) => {
+    let geometry, material
+
+    switch (type) {
+      case 'bowl':
+        geometry = new THREE.CylinderGeometry(0.3, 0.35, 0.25, 32)
+        material = new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.3, metalness: 0.1 })
+        break
+      case 'plate':
+        geometry = new THREE.CylinderGeometry(0.4, 0.4, 0.05, 32)
+        material = new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.4, metalness: 0 })
+        break
+      case 'glass':
+        geometry = new THREE.CylinderGeometry(0.08, 0.1, 0.2, 16)
+        material = new THREE.MeshStandardMaterial({ color: 0xe8f4f8, roughness: 0.1, metalness: 0.8, transparent: true, opacity: 0.7 })
+        break
+      case 'mug':
+        geometry = new THREE.CylinderGeometry(0.12, 0.12, 0.15, 16)
+        material = new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.3, metalness: 0.1 })
+        break
+      case 'fork':
+        geometry = new THREE.BoxGeometry(0.02, 0.3, 0.15)
+        material = new THREE.MeshStandardMaterial({ color: 0xcccccc, roughness: 0.2, metalness: 0.8 })
+        break
+      case 'knife':
+        geometry = new THREE.BoxGeometry(0.02, 0.3, 0.08)
+        material = new THREE.MeshStandardMaterial({ color: 0xcccccc, roughness: 0.2, metalness: 0.8 })
+        break
+      case 'spoon':
+        geometry = new THREE.BoxGeometry(0.015, 0.3, 0.1)
+        material = new THREE.MeshStandardMaterial({ color: 0xcccccc, roughness: 0.2, metalness: 0.8 })
+        break
+      default:
+        geometry = new THREE.BoxGeometry(0.3, 0.3, 0.3)
+        material = new THREE.MeshStandardMaterial({ color: 0xdddddd })
+    }
+
+    const mesh = new THREE.Mesh(geometry, material)
+    mesh.castShadow = true
+    mesh.receiveShadow = true
+    return mesh
+  }
 
   useEffect(() => {
     if (!containerRef.current) return
 
-    const width = containerRef.current.clientWidth
-    const height = containerRef.current.clientHeight
-
+    // Scene setup
     const scene = new THREE.Scene()
     scene.background = new THREE.Color(0xf5f5f5)
     sceneRef.current = scene
 
-    const camera = new THREE.PerspectiveCamera(50, width / height, 0.1, 1000)
-    cameraRef.current = camera
+    // Camera
+    const camera = new THREE.PerspectiveCamera(
+      50,
+      containerRef.current.clientWidth / containerRef.current.clientHeight,
+      0.1,
+      1000
+    )
+    camera.position.set(3, 3, 3)
+    camera.lookAt(0, 0.5, 0)
 
+    // Renderer
     const renderer = new THREE.WebGLRenderer({ antialias: true, preserveDrawingBuffer: true })
-    renderer.setSize(width, height)
-    renderer.setPixelRatio(window.devicePixelRatio)
+    renderer.setSize(containerRef.current.clientWidth, containerRef.current.clientHeight)
+    renderer.shadowMap.enabled = true
+    renderer.shadowMap.type = THREE.PCFShadowMap
     containerRef.current.appendChild(renderer.domElement)
     rendererRef.current = renderer
 
     // Lighting
-    const ambientLight = new THREE.AmbientLight(0xffffff, 0.6)
+    const ambientLight = new THREE.AmbientLight(0xffffff, 0.7)
     scene.add(ambientLight)
+
     const directionalLight = new THREE.DirectionalLight(0xffffff, 0.8)
-    directionalLight.position.set(5, 10, 7)
+    directionalLight.position.set(5, 8, 5)
+    directionalLight.castShadow = true
+    directionalLight.shadow.camera.left = -10
+    directionalLight.shadow.camera.right = 10
+    directionalLight.shadow.camera.top = 10
+    directionalLight.shadow.camera.bottom = -10
+    directionalLight.shadow.mapSize.width = 2048
+    directionalLight.shadow.mapSize.height = 2048
     scene.add(directionalLight)
 
-    // Table (sized based on selection)
-    const tableGeometry = new THREE.BoxGeometry(...(tableSize || [3.5, 0.1, 3.5]))
-    const tableMaterial = new THREE.MeshStandardMaterial({ color: 0x8b7355 })
-    const table = new THREE.Mesh(tableGeometry, tableMaterial)
-    table.userData = { label: 'Table' }
-    scene.add(table)
-    objectsRef.current.table = table
-
-    // Create label canvas for text rendering
-    const labelCanvas = document.createElement('canvas')
-    labelCanvas.width = width
-    labelCanvas.height = height
-    labelsCanvasRef.current = labelCanvas
-
-    // Camera controls (simple orbit)
-    let isDragging = false
-    let previousMousePosition = { x: 0, y: 0 }
-    let orbitAngles = { theta: 0, phi: Math.PI / 4 }
-
-    // Drag plane for object dragging (horizontal plane at y=0.5)
-    dragPlaneRef.current = new THREE.Plane(new THREE.Vector3(0, 1, 0), -0.5)
-
-    renderer.domElement.addEventListener('mousedown', (e) => {
-      const rect = renderer.domElement.getBoundingClientRect()
-      mouseRef.current.x = ((e.clientX - rect.left) / rect.width) * 2 - 1
-      mouseRef.current.y = -((e.clientY - rect.top) / rect.height) * 2 + 1
-
-      raycasterRef.current.setFromCamera(mouseRef.current, camera)
-
-      // Check for object intersection
-      const objectMeshes = Object.values(objectsRef.current).filter(m => m.userData.id && m.userData.id !== 'table')
-      const intersects = raycasterRef.current.intersectObjects(objectMeshes)
-
-      if (intersects.length > 0) {
-        draggedObjectRef.current = intersects[0].object
-        isDragging = true
-      } else {
-        isDragging = true
-        draggedObjectRef.current = null
-      }
-
-      previousMousePosition = { x: e.clientX, y: e.clientY }
+    // Ground plane
+    const groundGeometry = new THREE.PlaneGeometry(20, 20)
+    const groundMaterial = new THREE.MeshStandardMaterial({
+      color: 0xffffff,
+      roughness: 0.8,
+      metalness: 0
     })
+    const ground = new THREE.Mesh(groundGeometry, groundMaterial)
+    ground.rotation.x = -Math.PI / 2
+    ground.receiveShadow = true
+    scene.add(ground)
 
-    renderer.domElement.addEventListener('mousemove', (e) => {
-      if (isDragging) {
-        if (draggedObjectRef.current) {
-          // Drag object along plane
-          const rect = renderer.domElement.getBoundingClientRect()
-          mouseRef.current.x = ((e.clientX - rect.left) / rect.width) * 2 - 1
-          mouseRef.current.y = -((e.clientY - rect.top) / rect.height) * 2 + 1
-          raycasterRef.current.setFromCamera(mouseRef.current, camera)
+    // Grid
+    const gridHelper = new THREE.GridHelper(20, 20, 0xe0e0e0, 0xf0f0f0)
+    gridHelper.position.y = 0.001
+    scene.add(gridHelper)
 
-          const intersection = new THREE.Vector3()
-          raycasterRef.current.ray.intersectPlane(dragPlaneRef.current, intersection)
-
-          draggedObjectRef.current.position.x = intersection.x
-          draggedObjectRef.current.position.z = intersection.z
-
-          // Update object in state
-          const objId = draggedObjectRef.current.userData.id
-          const objData = objects.find(o => o.id === objId)
-          if (objData && onUpdateObject) {
-            onUpdateObject(objId, { position: [intersection.x, 0.5, intersection.z] })
-          }
-        } else {
-          // Orbit camera
-          const deltaX = e.clientX - previousMousePosition.x
-          const deltaY = e.clientY - previousMousePosition.y
-          orbitAngles.theta += deltaX * 0.01
-          orbitAngles.phi -= deltaY * 0.01
-          orbitAngles.phi = Math.max(0.1, Math.min(Math.PI - 0.1, orbitAngles.phi))
-        }
-        previousMousePosition = { x: e.clientX, y: e.clientY }
-      }
-    })
-
-    renderer.domElement.addEventListener('mouseup', () => {
-      isDragging = false
-      draggedObjectRef.current = null
-    })
-
-    renderer.domElement.addEventListener('wheel', (e) => {
-      e.preventDefault()
-      const currentDistance = camera.position.length()
-      const newDistance = currentDistance + e.deltaY * 0.01
-      camera.position.normalize().multiplyScalar(Math.max(3, Math.min(20, newDistance)))
-    })
-
-    const updateCamera = () => {
-      const elev = (cameraPreset.elevation * Math.PI) / 180
-      const azim = (cameraPreset.azimuth * Math.PI) / 180
-      const distance = cameraPreset.focal === 'wide' ? 12 : cameraPreset.focal === 'tight' ? 4 : 7
-      const radius = distance * Math.sin(elev)
-      const height = distance * Math.cos(elev)
-
-      camera.position.x = radius * Math.sin(azim)
-      camera.position.y = height
-      camera.position.z = radius * Math.cos(azim)
-      camera.lookAt(0, 0, 0)
-
-      if (cameraPreset.dutch !== 0) {
-        camera.rotateZ((cameraPreset.dutch * Math.PI) / 180)
-      }
-    }
-
-    const createCompositeCanvas = () => {
-      const composite = document.createElement('canvas')
-      composite.width = width * window.devicePixelRatio
-      composite.height = height * window.devicePixelRatio
-      const ctx = composite.getContext('2d')
-
-      // Draw 3D scene from renderer
-      ctx.drawImage(renderer.domElement, 0, 0, composite.width, composite.height)
-
-      // Draw labels
-      ctx.font = 'bold 14px Arial'
-      ctx.fillStyle = '#000'
-      ctx.textAlign = 'center'
-
-      scene.children.forEach((child) => {
-        if (child.userData.label) {
-          const vector = child.position.clone()
-          vector.project(camera)
-          const x = ((vector.x + 1) * composite.width) / 2
-          const y = (-(vector.y - 1) * composite.height) / 2
-
-          if (vector.z < 1) {
-            ctx.strokeStyle = '#fff'
-            ctx.lineWidth = 3
-            ctx.strokeText(child.userData.label, x, y)
-            ctx.fillStyle = '#000'
-            ctx.fillText(child.userData.label, x, y)
-          }
-        }
-      })
-
-      return composite
-    }
-
-    const animate = () => {
-      requestAnimationFrame(animate)
-      updateCamera()
-      renderer.render(scene, camera)
-
-      // Create composite canvas for export
-      const composite = createCompositeCanvas()
-      ref.current = composite
-    }
-
-    animate()
-
+    // Handle window resize
     const handleResize = () => {
-      const newWidth = containerRef.current.clientWidth
-      const newHeight = containerRef.current.clientHeight
-      camera.aspect = newWidth / newHeight
-      camera.updateProjectionMatrix()
-      renderer.setSize(newWidth, newHeight)
-      labelCanvas.width = newWidth
-      labelCanvas.height = newHeight
+      if (containerRef.current) {
+        const width = containerRef.current.clientWidth
+        const height = containerRef.current.clientHeight
+        camera.aspect = width / height
+        camera.updateProjectionMatrix()
+        renderer.setSize(width, height)
+      }
     }
-
     window.addEventListener('resize', handleResize)
 
+    // Mouse interaction
+    const onMouseMove = (event) => {
+      const rect = renderer.domElement.getBoundingClientRect()
+      mouseRef.current.x = ((event.clientX - rect.left) / rect.width) * 2 - 1
+      mouseRef.current.y = -((event.clientY - rect.top) / rect.height) * 2 + 1
+    }
+
+    const onMouseClick = (event) => {
+      raycasterRef.current.setFromCamera(mouseRef.current, camera)
+      const intersects = raycasterRef.current.intersectObjects(Array.from(objectsRef.current.values()))
+      if (intersects.length > 0) {
+        const clickedMesh = intersects[0].object
+        for (const [id, mesh] of objectsRef.current) {
+          if (mesh === clickedMesh) {
+            onSelectObject(id)
+            break
+          }
+        }
+      } else {
+        onSelectObject(null)
+      }
+    }
+
+    window.addEventListener('mousemove', onMouseMove)
+    renderer.domElement.addEventListener('click', onMouseClick)
+
+    // Animation loop
+    const animate = () => {
+      requestAnimationFrame(animate)
+      renderer.render(scene, camera)
+    }
+    animate()
+
+    // Cleanup
     return () => {
       window.removeEventListener('resize', handleResize)
-      if (renderer.domElement.parentNode) {
-        renderer.domElement.parentNode.removeChild(renderer.domElement)
-      }
+      window.removeEventListener('mousemove', onMouseMove)
+      renderer.domElement.removeEventListener('click', onMouseClick)
+      containerRef.current?.removeChild(renderer.domElement)
     }
   }, [])
 
-  // Update table size
-  useEffect(() => {
-    if (!sceneRef.current || !tableSize) return
-    const scene = sceneRef.current
-    const oldTable = objectsRef.current.table
-    if (oldTable) scene.remove(oldTable)
-
-    const tableGeometry = new THREE.BoxGeometry(...tableSize)
-    const tableMaterial = new THREE.MeshStandardMaterial({ color: 0x8b7355 })
-    const table = new THREE.Mesh(tableGeometry, tableMaterial)
-    table.userData = { label: 'Table' }
-    scene.add(table)
-    objectsRef.current.table = table
-  }, [tableSize])
-
-  // Update objects in scene
+  // Update scene objects
   useEffect(() => {
     if (!sceneRef.current) return
 
-    const scene = sceneRef.current
-
-    // Remove old objects
-    Object.values(objectsRef.current).forEach((mesh) => {
-      if (mesh.userData.id !== 'table') scene.remove(mesh)
-    })
-
-    objectsRef.current = { table: objectsRef.current.table }
-
-    // Add new objects
-    objects.forEach((obj) => {
-      const geometry = createGeometry(obj.type)
-      const material = new THREE.MeshStandardMaterial({
-        color: selectedObject === obj.id ? 0xff6b6b : 0x4a90e2,
-        metalness: 0.3,
-        roughness: 0.6
-      })
-      const mesh = new THREE.Mesh(geometry, material)
-      mesh.position.set(...obj.position)
-      mesh.rotation.set(...obj.rotation)
-      mesh.scale.set(...obj.scale)
-      mesh.userData = { id: obj.id, label: obj.label, type: obj.type }
-      scene.add(mesh)
-      objectsRef.current[obj.id] = mesh
-    })
-  }, [objects, selectedObject])
-
-  return <div ref={containerRef} style={{ width: '100%', height: '100%' }} />
-})
-
-function createGeometry(type) {
-  const geometries = {
-    bowl: new THREE.ConeGeometry(0.4, 0.3, 32),
-    plate: new THREE.CylinderGeometry(0.45, 0.45, 0.05, 32),
-    glass: new THREE.CylinderGeometry(0.2, 0.25, 0.5, 16),
-    fork: new THREE.BoxGeometry(0.1, 0.6, 0.05),
-    spoon: new THREE.BoxGeometry(0.15, 0.6, 0.05),
-    cup: new THREE.CylinderGeometry(0.2, 0.22, 0.4, 16),
-    chair: new THREE.BoxGeometry(0.5, 0.8, 0.5),
-    cube: new THREE.BoxGeometry(1, 1, 1),
-    sphere: new THREE.SphereGeometry(0.5, 32, 32),
-    cylinder: new THREE.CylinderGeometry(0.5, 0.5, 1, 32),
-    cone: new THREE.ConeGeometry(0.5, 1, 32),
-    torus: new THREE.TorusGeometry(0.5, 0.2, 16, 100),
-    plane: new THREE.PlaneGeometry(1, 1)
-  }
-  return geometries[type] || new THREE.BoxGeometry(0.5, 0.5, 0.5)
-}
-
-function renderLabels(canvas, camera, scene, width, height) {
-  const ctx = canvas.getContext('2d')
-  ctx.clearRect(0, 0, width, height)
-  ctx.font = 'bold 12px Arial'
-  ctx.fillStyle = '#000'
-  ctx.textAlign = 'center'
-
-  scene.children.forEach((child) => {
-    if (child.userData.label) {
-      const vector = child.position.clone()
-      vector.project(camera)
-      const x = (vector.x * width) / 2 + width / 2
-      const y = -(vector.y * height) / 2 + height / 2
-
-      if (vector.z < 1) {
-        ctx.fillText(child.userData.label, x, y - 10)
+    // Remove objects no longer in the list
+    const objectIds = new Set(objects.map(obj => obj.id))
+    for (const [id, mesh] of objectsRef.current) {
+      if (!objectIds.has(id)) {
+        sceneRef.current.remove(mesh)
+        objectsRef.current.delete(id)
       }
     }
-  })
+
+    // Add or update objects
+    objects.forEach(obj => {
+      if (!objectsRef.current.has(obj.id)) {
+        const mesh = createObject(obj.type)
+        mesh.position.fromArray(obj.position)
+        mesh.rotation.fromArray(obj.rotation)
+        mesh.scale.fromArray(obj.scale)
+        sceneRef.current.add(mesh)
+        objectsRef.current.set(obj.id, mesh)
+      } else {
+        const mesh = objectsRef.current.get(obj.id)
+        mesh.position.fromArray(obj.position)
+        mesh.rotation.fromArray(obj.rotation)
+        mesh.scale.fromArray(obj.scale)
+      }
+    })
+  }, [objects])
+
+  // Update selection highlight
+  useEffect(() => {
+    for (const [id, mesh] of objectsRef.current) {
+      if (id === selectedObjectId) {
+        mesh.material = mesh.material.clone()
+        mesh.material.emissive.setHex(0x0066cc)
+      } else {
+        mesh.material.emissive.setHex(0x000000)
+      }
+    }
+  }, [selectedObjectId])
+
+  return <div ref={containerRef} className="canvas-3d" />
 }
 
 export default Canvas3D

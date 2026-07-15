@@ -1,126 +1,92 @@
-import { useState, useRef, useEffect } from 'react'
+import { useState, useRef } from 'react'
 import Canvas3D from './components/Canvas3D'
-import ShapeLibrary from './components/ShapeLibrary'
-import CameraControls from './components/CameraControls'
-import SceneManager from './components/SceneManager'
-import TableSelector from './components/TableSelector'
+import CategoryPicker from './components/CategoryPicker'
+import LayersPanel from './components/LayersPanel'
 import './App.css'
 
 function App() {
   const canvasRef = useRef(null)
-  const sceneRef = useRef(null)
   const [objects, setObjects] = useState([])
-  const [selectedObject, setSelectedObject] = useState(null)
+  const [selectedObjectId, setSelectedObjectId] = useState(null)
   const [sceneName, setSceneName] = useState('Untitled Scene')
-  const [cameraPreset, setCameraPreset] = useState({ elevation: 45, azimuth: 0, dutch: 0, focal: 'medium' })
-  const [aspectRatio, setAspectRatio] = useState('16:9')
-  const [selectedTable, setSelectedTable] = useState('round')
-  const [tableSize, setTableSize] = useState([3.5, 0.1, 3.5])
 
-  const addObject = (shapeType) => {
-    const newId = Math.random().toString(36).substr(2, 9)
+  const addObject = (category, itemType) => {
+    const newId = `${itemType}-${Date.now()}`
     const newObject = {
       id: newId,
-      type: shapeType,
-      label: `${shapeType}_${objects.filter(o => o.type === shapeType).length + 1}`.substr(0, 10),
+      type: itemType,
+      category,
+      label: itemType,
       position: [0, 0.5, 0],
       rotation: [0, 0, 0],
       scale: [1, 1, 1]
     }
     setObjects([...objects, newObject])
-    setSelectedObject(newId)
+    setSelectedObjectId(newId)
   }
 
-  const removeObject = (id) => {
-    setObjects(objects.filter(o => o.id !== id))
-    if (selectedObject === id) setSelectedObject(null)
+  const deleteObject = (id) => {
+    setObjects(objects.filter(obj => obj.id !== id))
+    if (selectedObjectId === id) setSelectedObjectId(null)
   }
 
   const updateObject = (id, updates) => {
-    setObjects(objects.map(o => o.id === id ? { ...o, ...updates } : o))
+    setObjects(objects.map(obj => obj.id === id ? { ...obj, ...updates } : obj))
   }
 
-  const renameObject = (id, newLabel) => {
-    const truncated = newLabel.slice(0, 10)
-    updateObject(id, { label: truncated })
-  }
-
-  const handleTableChange = (tableId, size) => {
-    setSelectedTable(tableId)
-    setTableSize(size)
-  }
-
-  const exportImage = async () => {
-    if (!canvasRef.current) return
-    const link = document.createElement('a')
-    link.href = canvasRef.current.toDataURL('image/png')
-    link.download = `${sceneName.replace(/\s+/g, '_')}_${aspectRatio.replace(':', '-')}.png`
-    link.click()
+  const getCategoryCount = (category, itemType) => {
+    return objects.filter(obj => obj.category === category && obj.type === itemType).length
   }
 
   return (
-    <div className="app-container">
-      <header className="header">
-        <div className="scene-name-container">
-          <input
-            type="text"
-            value={sceneName}
-            onChange={(e) => setSceneName(e.target.value)}
-            className="scene-name"
-            placeholder="Scene name"
-          />
-        </div>
-        <button className="export-btn" onClick={exportImage}>Export PNG</button>
-      </header>
-
-      <div className="main-layout">
-        <aside className="left-panel">
-          <SceneManager
-            objects={objects}
-            selectedObject={selectedObject}
-            onSelect={setSelectedObject}
-            onDelete={removeObject}
-            onRename={renameObject}
-          />
-        </aside>
-
-        <section className="canvas-section">
-          <Canvas3D
-            ref={canvasRef}
-            objects={objects}
-            selectedObject={selectedObject}
-            cameraPreset={cameraPreset}
-            aspectRatio={aspectRatio}
-            sceneRef={sceneRef}
-            onUpdateObject={updateObject}
-            tableSize={tableSize}
-          />
-          <div className="canvas-info">
-            <span>Drag to orbit • Scroll to zoom • Right-click to pan</span>
-          </div>
-        </section>
-
-        <aside className="right-panel">
-          <div className="panel-section">
-            <TableSelector selectedTable={selectedTable} onTableChange={handleTableChange} />
-          </div>
-
-          <div className="panel-section">
-            <h3>Camera</h3>
-            <CameraControls
-              cameraPreset={cameraPreset}
-              onPresetChange={setCameraPreset}
-              aspectRatio={aspectRatio}
-              onAspectRatioChange={setAspectRatio}
+    <div className="app">
+      {/* Top Toolbar */}
+      <header className="toolbar">
+        <div className="toolbar-left">
+          <div className="scene-name-pill">
+            <div className="scene-dot"></div>
+            <input
+              type="text"
+              value={sceneName}
+              onChange={(e) => setSceneName(e.target.value)}
+              className="scene-name-input"
             />
           </div>
+          <button className="toolbar-icon" title="Save">💾</button>
+          <button className="toolbar-icon" title="Import">📦</button>
+          <button className="toolbar-icon" title="Add">➕</button>
+        </div>
+        <div className="toolbar-right">
+          <button className="toolbar-icon" title="Properties">🖌️</button>
+          <button className="toolbar-icon" title="Layers">📊</button>
+          <button className="toolbar-icon" title="Menu">☰</button>
+        </div>
+      </header>
 
-          <div className="panel-section">
-            <h3>Add Items</h3>
-            <ShapeLibrary onAddShape={addObject} />
-          </div>
-        </aside>
-      </div>
+      {/* Main Canvas */}
+      <main className="main-content">
+        <Canvas3D
+          ref={canvasRef}
+          objects={objects}
+          selectedObjectId={selectedObjectId}
+          onSelectObject={setSelectedObjectId}
+        />
+      </main>
+
+      {/* Right Panel - Layers */}
+      <aside className="right-panel">
+        <LayersPanel
+          objects={objects}
+          selectedObjectId={selectedObjectId}
+          onSelectObject={setSelectedObjectId}
+          onDeleteObject={deleteObject}
+        />
+      </aside>
+
+      {/* Bottom Category Picker */}
+      <footer className="category-footer">
+        <CategoryPicker onSelectItem={addObject} getCategoryCount={getCategoryCount} />
+      </footer>
     </div>
   )
 }
