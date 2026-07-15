@@ -131,15 +131,14 @@ const Canvas3D = ({ objects, selectedObjectId, onSelectObject, onSceneReady }) =
 
   // Update scene objects
   useEffect(() => {
-    if (!sceneRef || typeof sceneRef.add !== 'function') {
-      console.log('Scene not ready:', { hasSceneRef: !!sceneRef, hasAdd: sceneRef && typeof sceneRef.add })
+    if (!sceneRef.current || typeof sceneRef.current.add !== 'function') {
       return
     }
 
     const objectIds = new Set(objects.map(o => o.id))
     for (const [id, mesh] of objectsRef.current) {
       if (!objectIds.has(id)) {
-        sceneRef.remove(mesh)
+        sceneRef.current.remove(mesh)
         objectsRef.current.delete(id)
       }
     }
@@ -150,8 +149,7 @@ const Canvas3D = ({ objects, selectedObjectId, onSelectObject, onSceneReady }) =
         mesh.position.fromArray(obj.position)
         mesh.rotation.fromArray(obj.rotation)
         mesh.scale.fromArray(obj.scale)
-        console.log(`Adding ${obj.type} at position`, obj.position)
-        sceneRef.add(mesh)
+        sceneRef.current.add(mesh)
         objectsRef.current.set(obj.id, mesh)
       } else {
         const mesh = objectsRef.current.get(obj.id)
@@ -160,7 +158,6 @@ const Canvas3D = ({ objects, selectedObjectId, onSelectObject, onSceneReady }) =
         mesh.scale.fromArray(obj.scale)
       }
     })
-    console.log('Scene objects count:', sceneRef.children.length)
   }, [objects])
 
   // Update selection highlight
