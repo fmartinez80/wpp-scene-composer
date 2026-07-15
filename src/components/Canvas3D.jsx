@@ -1,13 +1,17 @@
 import { useEffect, useRef, forwardRef } from 'react'
 import * as THREE from 'three'
 
-const Canvas3D = forwardRef(({ objects, selectedObject, cameraPreset, aspectRatio }, ref) => {
+const Canvas3D = forwardRef(({ objects, selectedObject, cameraPreset, aspectRatio, onUpdateObject, tableSize }, ref) => {
   const containerRef = useRef(null)
   const sceneRef = useRef(null)
   const rendererRef = useRef(null)
   const cameraRef = useRef(null)
   const objectsRef = useRef({})
   const labelsCanvasRef = useRef(null)
+  const raycasterRef = useRef(new THREE.Raycaster())
+  const mouseRef = useRef(new THREE.Vector2())
+  const draggedObjectRef = useRef(null)
+  const dragPlaneRef = useRef(null)
 
   useEffect(() => {
     if (!containerRef.current) return
@@ -35,8 +39,8 @@ const Canvas3D = forwardRef(({ objects, selectedObject, cameraPreset, aspectRati
     directionalLight.position.set(5, 10, 7)
     scene.add(directionalLight)
 
-    // Table (simple box)
-    const tableGeometry = new THREE.BoxGeometry(4, 0.1, 2.5)
+    // Table (sized based on selection)
+    const tableGeometry = new THREE.BoxGeometry(...(tableSize || [3.5, 0.1, 3.5]))
     const tableMaterial = new THREE.MeshStandardMaterial({ color: 0x8b7355 })
     const table = new THREE.Mesh(tableGeometry, tableMaterial)
     table.userData = { label: 'Table' }
@@ -54,24 +58,67 @@ const Canvas3D = forwardRef(({ objects, selectedObject, cameraPreset, aspectRati
     let previousMousePosition = { x: 0, y: 0 }
     let orbitAngles = { theta: 0, phi: Math.PI / 4 }
 
+    // Drag plane for object dragging (horizontal plane at y=0.5)
+    dragPlaneRef.current = new THREE.Plane(new THREE.Vector3(0, 1, 0), -0.5)
+
     renderer.domElement.addEventListener('mousedown', (e) => {
-      isDragging = true
+      const rect = renderer.domElement.getBoundingClientRect()
+      mouseRef.current.x = ((e.clientX - rect.left) / rect.width) * 2 - 1
+      mouseRef.current.y = -((e.clientY - rect.top) / rect.height) * 2 + 1
+
+      raycasterRef.current.setFromCamera(mouseRef.current, camera)
+
+      // Check for object intersection
+      const objectMeshes = Object.values(objectsRef.current).filter(m => m.userData.id && m.userData.id !== 'table')
+      const intersects = raycasterRef.current.intersectObjects(objectMeshes)
+
+      if (intersects.length > 0) {
+        draggedObjectRef.current = intersects[0].object
+        isDragging = true
+      } else {
+        isDragging = true
+        draggedObjectRef.current = null
+      }
+
       previousMousePosition = { x: e.clientX, y: e.clientY }
     })
 
     renderer.domElement.addEventListener('mousemove', (e) => {
-      if (isDragging && e.button !== 2) {
-        const deltaX = e.clientX - previousMousePosition.x
-        const deltaY = e.clientY - previousMousePosition.y
-        orbitAngles.theta += deltaX * 0.01
-        orbitAngles.phi -= deltaY * 0.01
-        orbitAngles.phi = Math.max(0.1, Math.min(Math.PI - 0.1, orbitAngles.phi))
+      if (isDragging) {
+        if (draggedObjectRef.current) {
+          // Drag object along plane
+          const rect = renderer.domElement.getBoundingClientRect()
+          mouseRef.current.x = ((e.clientX - rect.left) / rect.width) * 2 - 1
+          mouseRef.current.y = -((e.clientY - rect.top) / rect.height) * 2 + 1
+          raycasterRef.current.setFromCamera(mouseRef.current, camera)
+
+          const intersection = new THREE.Vector3()
+          raycasterRef.current.ray.intersectPlane(dragPlaneRef.current, intersection)
+
+          draggedObjectRef.current.position.x = intersection.x
+          draggedObjectRef.current.position.z = intersection.z
+
+          // Update object in state
+          const objId = draggedObjectRef.current.userData.id
+          const objData = objects.find(o => o.id === objId)
+          if (objData && onUpdateObject) {
+            onUpdateObject(objId, { position: [intersection.x, 0.5, intersection.z] })
+          }
+        } else {
+          // Orbit camera
+          const deltaX = e.clientX - previousMousePosition.x
+          const deltaY = e.clientY - previousMousePosition.y
+          orbitAngles.theta += deltaX * 0.01
+          orbitAngles.phi -= deltaY * 0.01
+          orbitAngles.phi = Math.max(0.1, Math.min(Math.PI - 0.1, orbitAngles.phi))
+        }
         previousMousePosition = { x: e.clientX, y: e.clientY }
       }
     })
 
     renderer.domElement.addEventListener('mouseup', () => {
       isDragging = false
+      draggedObjectRef.current = null
     })
 
     renderer.domElement.addEventListener('wheel', (e) => {
@@ -164,6 +211,21 @@ const Canvas3D = forwardRef(({ objects, selectedObject, cameraPreset, aspectRati
       }
     }
   }, [])
+
+  // Update table size
+  useEffect(() => {
+    if (!sceneRef.current || !tableSize) return
+    const scene = sceneRef.current
+    const oldTable = objectsRef.current.table
+    if (oldTable) scene.remove(oldTable)
+
+    const tableGeometry = new THREE.BoxGeometry(...tableSize)
+    const tableMaterial = new THREE.MeshStandardMaterial({ color: 0x8b7355 })
+    const table = new THREE.Mesh(tableGeometry, tableMaterial)
+    table.userData = { label: 'Table' }
+    scene.add(table)
+    objectsRef.current.table = table
+  }, [tableSize])
 
   // Update objects in scene
   useEffect(() => {

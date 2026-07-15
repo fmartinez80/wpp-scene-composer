@@ -3,6 +3,7 @@ import Canvas3D from './components/Canvas3D'
 import ShapeLibrary from './components/ShapeLibrary'
 import CameraControls from './components/CameraControls'
 import SceneManager from './components/SceneManager'
+import TableSelector from './components/TableSelector'
 import './App.css'
 
 function App() {
@@ -13,6 +14,8 @@ function App() {
   const [sceneName, setSceneName] = useState('Untitled Scene')
   const [cameraPreset, setCameraPreset] = useState({ elevation: 45, azimuth: 0, dutch: 0, focal: 'medium' })
   const [aspectRatio, setAspectRatio] = useState('16:9')
+  const [selectedTable, setSelectedTable] = useState('round')
+  const [tableSize, setTableSize] = useState([3.5, 0.1, 3.5])
 
   const addObject = (shapeType) => {
     const newId = Math.random().toString(36).substr(2, 9)
@@ -40,6 +43,11 @@ function App() {
   const renameObject = (id, newLabel) => {
     const truncated = newLabel.slice(0, 10)
     updateObject(id, { label: truncated })
+  }
+
+  const handleTableChange = (tableId, size) => {
+    setSelectedTable(tableId)
+    setTableSize(size)
   }
 
   const exportImage = async () => {
@@ -84,6 +92,8 @@ function App() {
             cameraPreset={cameraPreset}
             aspectRatio={aspectRatio}
             sceneRef={sceneRef}
+            onUpdateObject={updateObject}
+            tableSize={tableSize}
           />
           <div className="canvas-info">
             <span>Drag to orbit • Scroll to zoom • Right-click to pan</span>
@@ -91,6 +101,10 @@ function App() {
         </section>
 
         <aside className="right-panel">
+          <div className="panel-section">
+            <TableSelector selectedTable={selectedTable} onTableChange={handleTableChange} />
+          </div>
+
           <div className="panel-section">
             <h3>Camera</h3>
             <CameraControls
