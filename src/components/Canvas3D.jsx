@@ -155,7 +155,6 @@ const Canvas3D = forwardRef(({ objects, selectedObject, cameraPreset, aspectRati
       ctx.drawImage(renderer.domElement, 0, 0, composite.width, composite.height)
 
       // Draw labels
-      const labelCtx = labelCanvas.getContext('2d')
       ctx.font = 'bold 14px Arial'
       ctx.fillStyle = '#000'
       ctx.textAlign = 'center'
