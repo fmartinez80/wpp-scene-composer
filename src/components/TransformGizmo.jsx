@@ -11,7 +11,7 @@ const TransformGizmo = ({ selectedObjectId, objects, onUpdateObject, sceneRef, c
   const mouseRef = useRef(new THREE.Vector2())
 
   useEffect(() => {
-    if (!selectedObjectId || !sceneRef.current || !cameraRef.current) return
+    if (!selectedObjectId || !sceneRef || !cameraRef) return
 
     const selectedObj = objects.find(o => o.id === selectedObjectId)
     if (!selectedObj) return
@@ -20,35 +20,35 @@ const TransformGizmo = ({ selectedObjectId, objects, onUpdateObject, sceneRef, c
     const gizmo = new THREE.Group()
     gizmoRef.current = gizmo
 
-    // X-axis arrow (red) - larger and more visible
-    const xArrowGeom = new THREE.BoxGeometry(1.0, 0.15, 0.15)
-    const xArrowMat = new THREE.MeshStandardMaterial({ color: 0xff4444, emissive: 0xff0000, emissiveIntensity: 0.5 })
+    // X-axis arrow (red) - much larger for visibility
+    const xArrowGeom = new THREE.BoxGeometry(2.0, 0.3, 0.3)
+    const xArrowMat = new THREE.MeshBasicMaterial({ color: 0xff0000, wireframe: false })
     const xArrow = new THREE.Mesh(xArrowGeom, xArrowMat)
-    xArrow.position.x = 0.5
-    xArrow.position.y = 0.3
+    xArrow.position.x = 1.0
+    xArrow.position.y = 0.2
     xArrow.userData.axis = 'x'
     gizmo.add(xArrow)
 
-    // Z-axis arrow (blue) - larger and more visible
-    const zArrowGeom = new THREE.BoxGeometry(0.15, 0.15, 1.0)
-    const zArrowMat = new THREE.MeshStandardMaterial({ color: 0x4444ff, emissive: 0x0000ff, emissiveIntensity: 0.5 })
+    // Z-axis arrow (blue) - much larger for visibility
+    const zArrowGeom = new THREE.BoxGeometry(0.3, 0.3, 2.0)
+    const zArrowMat = new THREE.MeshBasicMaterial({ color: 0x0000ff, wireframe: false })
     const zArrow = new THREE.Mesh(zArrowGeom, zArrowMat)
-    zArrow.position.z = 0.5
-    zArrow.position.y = 0.3
+    zArrow.position.z = 1.0
+    zArrow.position.y = 0.2
     zArrow.userData.axis = 'z'
     gizmo.add(zArrow)
 
-    // Center point (yellow) - larger
-    const centerGeom = new THREE.SphereGeometry(0.25, 16, 16)
-    const centerMat = new THREE.MeshStandardMaterial({ color: 0xffff00, emissive: 0xffaa00, emissiveIntensity: 0.7 })
+    // Center point (yellow) - much larger for visibility
+    const centerGeom = new THREE.SphereGeometry(0.5, 16, 16)
+    const centerMat = new THREE.MeshBasicMaterial({ color: 0xffff00, wireframe: false })
     const center = new THREE.Mesh(centerGeom, centerMat)
-    center.position.y = 0.3
+    center.position.y = 0.2
     center.userData.axis = 'xy'
     gizmo.add(center)
 
-    // Position gizmo at object location, offset well above the surface
-    gizmo.position.set(selectedObj.position[0], selectedObj.position[1] + 1.0, selectedObj.position[2])
-    sceneRef.current.add(gizmo)
+    // Position gizmo at object location, on the table surface
+    gizmo.position.set(selectedObj.position[0], selectedObj.position[1], selectedObj.position[2])
+    sceneRef.add(gizmo)
 
     // Mouse tracking
     const onMouseMove = (event) => {
@@ -61,7 +61,7 @@ const TransformGizmo = ({ selectedObjectId, objects, onUpdateObject, sceneRef, c
         const axis = dragAxisRef.current
 
         // Ray cast to table surface plane to get new position
-        raycasterRef.current.setFromCamera(mouseRef.current, cameraRef.current)
+        raycasterRef.current.setFromCamera(mouseRef.current, cameraRef)
         const tableHeight = selectedObj.position[1]
         const planeNormal = new THREE.Vector3(0, 1, 0)
         const plane = new THREE.Plane(planeNormal, -tableHeight)
@@ -114,8 +114,8 @@ const TransformGizmo = ({ selectedObjectId, objects, onUpdateObject, sceneRef, c
       window.removeEventListener('mousemove', onMouseMove)
       window.removeEventListener('mousedown', onMouseDown)
       window.removeEventListener('mouseup', onMouseUp)
-      if (gizmoRef.current && sceneRef.current) {
-        sceneRef.current.remove(gizmoRef.current)
+      if (gizmoRef.current && sceneRef) {
+        sceneRef.remove(gizmoRef.current)
       }
     }
   }, [selectedObjectId, objects, onUpdateObject, sceneRef, cameraRef])
