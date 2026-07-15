@@ -1,13 +1,12 @@
 import { useState, useRef } from 'react'
 import Canvas3D from './components/Canvas3D'
+import TransformGizmo from './components/TransformGizmo'
 import CategoryPicker from './components/CategoryPicker'
 import LayersPanel from './components/LayersPanel'
 import './App.css'
 
 function App() {
-  const canvasRef = useRef(null)
   const [objects, setObjects] = useState(() => {
-    // Initialize with a wood table as the foundation
     return [{
       id: 'wood-table-init',
       type: 'wood-table',
@@ -20,6 +19,8 @@ function App() {
   })
   const [selectedObjectId, setSelectedObjectId] = useState('wood-table-init')
   const [sceneName, setSceneName] = useState('Untitled Scene')
+  const [sceneRef, setSceneRef] = useState(null)
+  const [cameraRef, setCameraRef] = useState(null)
 
   const addObject = (category, itemType) => {
     const newId = `${itemType}-${Date.now()}`
@@ -47,6 +48,11 @@ function App() {
 
   const getCategoryCount = (category, itemType) => {
     return objects.filter(obj => obj.category === category && obj.type === itemType).length
+  }
+
+  const handleSceneReady = (scene, camera) => {
+    setSceneRef(scene)
+    setCameraRef(camera)
   }
 
   return (
@@ -77,12 +83,20 @@ function App() {
       {/* Main Canvas */}
       <main className="main-content">
         <Canvas3D
-          ref={canvasRef}
           objects={objects}
           selectedObjectId={selectedObjectId}
           onSelectObject={setSelectedObjectId}
-          onUpdateObject={updateObject}
+          onSceneReady={({ scene, camera }) => handleSceneReady(scene, camera)}
         />
+        {selectedObjectId && sceneRef && cameraRef && (
+          <TransformGizmo
+            selectedObjectId={selectedObjectId}
+            objects={objects}
+            onUpdateObject={updateObject}
+            sceneRef={sceneRef}
+            cameraRef={cameraRef}
+          />
+        )}
       </main>
 
       {/* Right Panel - Layers */}
