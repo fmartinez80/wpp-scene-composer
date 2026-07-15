@@ -6,8 +6,19 @@ import './App.css'
 
 function App() {
   const canvasRef = useRef(null)
-  const [objects, setObjects] = useState([])
-  const [selectedObjectId, setSelectedObjectId] = useState(null)
+  const [objects, setObjects] = useState(() => {
+    // Initialize with a wood table as the foundation
+    return [{
+      id: 'wood-table-init',
+      type: 'wood-table',
+      category: 'tables',
+      label: 'wood-table',
+      position: [0, 0, 0],
+      rotation: [0, 0, 0],
+      scale: [1, 1, 1]
+    }]
+  })
+  const [selectedObjectId, setSelectedObjectId] = useState('wood-table-init')
   const [sceneName, setSceneName] = useState('Untitled Scene')
 
   const addObject = (category, itemType) => {
