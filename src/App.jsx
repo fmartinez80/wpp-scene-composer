@@ -49,9 +49,9 @@ function App() {
 
   const getCategoryCount = useCallback((category, itemType) => {
     return objects.filter(obj => obj.category === category && obj.type === itemType).length
-  }, [objects])
+  }, [])
 
-  const handleSceneReady = useCallback((scene, camera) => {
+  const handleSceneReady = useCallback(({ scene, camera }) => {
     setSceneRef(scene)
     setCameraRef(camera)
   }, [])
@@ -87,7 +87,7 @@ function App() {
           objects={objects}
           selectedObjectId={selectedObjectId}
           onSelectObject={setSelectedObjectId}
-          onSceneReady={({ scene, camera }) => handleSceneReady(scene, camera)}
+          onSceneReady={handleSceneReady}
         />
         {selectedObjectId && sceneRef && cameraRef && (
           <TransformGizmo
