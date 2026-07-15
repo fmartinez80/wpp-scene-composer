@@ -4,9 +4,6 @@ import * as THREE from 'three'
 const TransformGizmo = ({ selectedObjectId, objects, onUpdateObject, sceneRef, cameraRef }) => {
   const gizmoRef = useRef(null)
   const isDraggingRef = useRef(false)
-  const dragAxisRef = useRef(null)
-  const dragStartRef = useRef({ x: 0, z: 0 })
-  const objectStartPosRef = useRef({ x: 0, z: 0 })
   const raycasterRef = useRef(new THREE.Raycaster())
   const mouseRef = useRef(new THREE.Vector2())
 
@@ -16,35 +13,53 @@ const TransformGizmo = ({ selectedObjectId, objects, onUpdateObject, sceneRef, c
     const selectedObj = objects.find(o => o.id === selectedObjectId)
     if (!selectedObj) return
 
-    // Create gizmo visuals
+    // Create small circular directional pad
     const gizmo = new THREE.Group()
     gizmoRef.current = gizmo
 
-    // X-axis arrow (red) - much larger for visibility
-    const xArrowGeom = new THREE.BoxGeometry(2.0, 0.3, 0.3)
-    const xArrowMat = new THREE.MeshBasicMaterial({ color: 0xff0000, wireframe: false })
-    const xArrow = new THREE.Mesh(xArrowGeom, xArrowMat)
-    xArrow.position.x = 1.0
-    xArrow.position.y = 0.2
-    xArrow.userData.axis = 'x'
-    gizmo.add(xArrow)
+    // Circular base pad (light gray)
+    const padGeom = new THREE.CylinderGeometry(0.3, 0.3, 0.05, 32)
+    const padMat = new THREE.MeshBasicMaterial({ color: 0xcccccc })
+    const pad = new THREE.Mesh(padGeom, padMat)
+    pad.position.y = 0.02
+    pad.userData.type = 'pad'
+    gizmo.add(pad)
 
-    // Z-axis arrow (blue) - much larger for visibility
-    const zArrowGeom = new THREE.BoxGeometry(0.3, 0.3, 2.0)
-    const zArrowMat = new THREE.MeshBasicMaterial({ color: 0x0000ff, wireframe: false })
-    const zArrow = new THREE.Mesh(zArrowGeom, zArrowMat)
-    zArrow.position.z = 1.0
-    zArrow.position.y = 0.2
-    zArrow.userData.axis = 'z'
-    gizmo.add(zArrow)
+    // Four directional indicators
+    const arrowSize = 0.08
+    const arrowDist = 0.15
 
-    // Center point (yellow) - much larger for visibility
-    const centerGeom = new THREE.SphereGeometry(0.5, 16, 16)
-    const centerMat = new THREE.MeshBasicMaterial({ color: 0xffff00, wireframe: false })
-    const center = new THREE.Mesh(centerGeom, centerMat)
-    center.position.y = 0.2
-    center.userData.axis = 'xy'
-    gizmo.add(center)
+    // Forward (positive Z) - blue
+    const fwdGeom = new THREE.BoxGeometry(arrowSize * 0.6, arrowSize * 0.3, arrowSize)
+    const fwdMat = new THREE.MeshBasicMaterial({ color: 0x0066ff })
+    const fwd = new THREE.Mesh(fwdGeom, fwdMat)
+    fwd.position.set(0, 0.05, arrowDist)
+    fwd.userData.direction = [0, 1]
+    gizmo.add(fwd)
+
+    // Backward (negative Z) - blue
+    const bwdGeom = new THREE.BoxGeometry(arrowSize * 0.6, arrowSize * 0.3, arrowSize)
+    const bwdMat = new THREE.MeshBasicMaterial({ color: 0x0066ff })
+    const bwd = new THREE.Mesh(bwdGeom, bwdMat)
+    bwd.position.set(0, 0.05, -arrowDist)
+    bwd.userData.direction = [0, -1]
+    gizmo.add(bwd)
+
+    // Right (positive X) - red
+    const rgtGeom = new THREE.BoxGeometry(arrowSize, arrowSize * 0.3, arrowSize * 0.6)
+    const rgtMat = new THREE.MeshBasicMaterial({ color: 0xff6600 })
+    const rgt = new THREE.Mesh(rgtGeom, rgtMat)
+    rgt.position.set(arrowDist, 0.05, 0)
+    rgt.userData.direction = [1, 0]
+    gizmo.add(rgt)
+
+    // Left (negative X) - red
+    const lftGeom = new THREE.BoxGeometry(arrowSize, arrowSize * 0.3, arrowSize * 0.6)
+    const lftMat = new THREE.MeshBasicMaterial({ color: 0xff6600 })
+    const lft = new THREE.Mesh(lftGeom, lftMat)
+    lft.position.set(-arrowDist, 0.05, 0)
+    lft.userData.direction = [-1, 0]
+    gizmo.add(lft)
 
     // Position gizmo at object location, on the table surface
     gizmo.position.set(selectedObj.position[0], selectedObj.position[1], selectedObj.position[2])
@@ -57,10 +72,7 @@ const TransformGizmo = ({ selectedObjectId, objects, onUpdateObject, sceneRef, c
       mouseRef.current.x = ((event.clientX - rect.left) / rect.width) * 2 - 1
       mouseRef.current.y = -((event.clientY - rect.top) / rect.height) * 2 + 1
 
-      if (isDraggingRef.current && dragAxisRef.current) {
-        const axis = dragAxisRef.current
-
-        // Ray cast to table surface plane to get new position
+      if (isDraggingRef.current) {
         raycasterRef.current.setFromCamera(mouseRef.current, cameraRef)
         const tableHeight = selectedObj.position[1]
         const planeNormal = new THREE.Vector3(0, 1, 0)
@@ -68,42 +80,24 @@ const TransformGizmo = ({ selectedObjectId, objects, onUpdateObject, sceneRef, c
         const intersection = new THREE.Vector3()
 
         if (!raycasterRef.current.ray.intersectPlane(plane, intersection)) {
-          return // Ray doesn't intersect plane
+          return
         }
 
-        if (axis === 'x') {
-          const newX = intersection.x
-          onUpdateObject(selectedObjectId, { position: [newX, selectedObj.position[1], selectedObj.position[2]] })
-          gizmo.position.set(newX, selectedObj.position[1], selectedObj.position[2])
-        } else if (axis === 'z') {
-          const newZ = intersection.z
-          onUpdateObject(selectedObjectId, { position: [selectedObj.position[0], selectedObj.position[1], newZ] })
-          gizmo.position.set(selectedObj.position[0], selectedObj.position[1], newZ)
-        } else if (axis === 'xy') {
-          onUpdateObject(selectedObjectId, { position: [intersection.x, selectedObj.position[1], intersection.z] })
-          gizmo.position.set(intersection.x, selectedObj.position[1], intersection.z)
-        }
+        onUpdateObject(selectedObjectId, { position: [intersection.x, selectedObj.position[1], intersection.z] })
+        gizmo.position.set(intersection.x, selectedObj.position[1], intersection.z)
       }
     }
 
     const onMouseDown = (event) => {
-      // Check if clicking on gizmo
-      raycasterRef.current.setFromCamera(mouseRef.current, cameraRef.current)
+      raycasterRef.current.setFromCamera(mouseRef.current, cameraRef)
       const intersects = raycasterRef.current.intersectObjects(gizmo.children)
       if (intersects.length > 0) {
         isDraggingRef.current = true
-        dragAxisRef.current = intersects[0].object.userData.axis || 'xy'
-        dragStartRef.current = { x: mouseRef.current.x, z: mouseRef.current.y }
-        objectStartPosRef.current = {
-          x: selectedObj.position[0],
-          z: selectedObj.position[2]
-        }
       }
     }
 
     const onMouseUp = () => {
       isDraggingRef.current = false
-      dragAxisRef.current = null
     }
 
     window.addEventListener('mousemove', onMouseMove)
