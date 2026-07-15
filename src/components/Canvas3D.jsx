@@ -131,12 +131,12 @@ const Canvas3D = ({ objects, selectedObjectId, onSelectObject, onSceneReady }) =
 
   // Update scene objects
   useEffect(() => {
-    if (!sceneRef.current) return
+    if (!sceneRef || typeof sceneRef.add !== 'function') return
 
     const objectIds = new Set(objects.map(o => o.id))
     for (const [id, mesh] of objectsRef.current) {
       if (!objectIds.has(id)) {
-        sceneRef.current.remove(mesh)
+        sceneRef.remove(mesh)
         objectsRef.current.delete(id)
       }
     }
@@ -147,7 +147,7 @@ const Canvas3D = ({ objects, selectedObjectId, onSelectObject, onSceneReady }) =
         mesh.position.fromArray(obj.position)
         mesh.rotation.fromArray(obj.rotation)
         mesh.scale.fromArray(obj.scale)
-        sceneRef.current.add(mesh)
+        sceneRef.add(mesh)
         objectsRef.current.set(obj.id, mesh)
       } else {
         const mesh = objectsRef.current.get(obj.id)
