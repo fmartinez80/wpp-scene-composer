@@ -20,31 +20,34 @@ const TransformGizmo = ({ selectedObjectId, objects, onUpdateObject, sceneRef, c
     const gizmo = new THREE.Group()
     gizmoRef.current = gizmo
 
-    // X-axis arrow (red)
-    const xArrowGeom = new THREE.BoxGeometry(0.5, 0.1, 0.1)
-    const xArrowMat = new THREE.MeshStandardMaterial({ color: 0xff4444, emissive: 0xff0000, emissiveIntensity: 0.3 })
+    // X-axis arrow (red) - larger and more visible
+    const xArrowGeom = new THREE.BoxGeometry(1.0, 0.15, 0.15)
+    const xArrowMat = new THREE.MeshStandardMaterial({ color: 0xff4444, emissive: 0xff0000, emissiveIntensity: 0.5 })
     const xArrow = new THREE.Mesh(xArrowGeom, xArrowMat)
-    xArrow.position.x = 0.3
+    xArrow.position.x = 0.5
+    xArrow.position.y = 0.3
     xArrow.userData.axis = 'x'
     gizmo.add(xArrow)
 
-    // Z-axis arrow (blue)
-    const zArrowGeom = new THREE.BoxGeometry(0.1, 0.1, 0.5)
-    const zArrowMat = new THREE.MeshStandardMaterial({ color: 0x4444ff, emissive: 0x0000ff, emissiveIntensity: 0.3 })
+    // Z-axis arrow (blue) - larger and more visible
+    const zArrowGeom = new THREE.BoxGeometry(0.15, 0.15, 1.0)
+    const zArrowMat = new THREE.MeshStandardMaterial({ color: 0x4444ff, emissive: 0x0000ff, emissiveIntensity: 0.5 })
     const zArrow = new THREE.Mesh(zArrowGeom, zArrowMat)
-    zArrow.position.z = 0.3
+    zArrow.position.z = 0.5
+    zArrow.position.y = 0.3
     zArrow.userData.axis = 'z'
     gizmo.add(zArrow)
 
-    // Center point (yellow)
-    const centerGeom = new THREE.SphereGeometry(0.15, 16, 16)
-    const centerMat = new THREE.MeshStandardMaterial({ color: 0xffff00, emissive: 0xffaa00, emissiveIntensity: 0.5 })
+    // Center point (yellow) - larger
+    const centerGeom = new THREE.SphereGeometry(0.25, 16, 16)
+    const centerMat = new THREE.MeshStandardMaterial({ color: 0xffff00, emissive: 0xffaa00, emissiveIntensity: 0.7 })
     const center = new THREE.Mesh(centerGeom, centerMat)
+    center.position.y = 0.3
     center.userData.axis = 'xy'
     gizmo.add(center)
 
-    // Position gizmo at object location
-    gizmo.position.set(selectedObj.position[0], selectedObj.position[1], selectedObj.position[2])
+    // Position gizmo at object location, offset well above the surface
+    gizmo.position.set(selectedObj.position[0], selectedObj.position[1] + 1.0, selectedObj.position[2])
     sceneRef.current.add(gizmo)
 
     // Mouse tracking
