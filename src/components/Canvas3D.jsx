@@ -372,3 +372,5 @@ const Canvas3D = forwardRef(({ objects, selectedObjectId, onSelectObject, onUpda
 
 Canvas3D.displayName = 'Canvas3D'
 export default Canvas3D
+
+
