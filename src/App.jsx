@@ -25,12 +25,13 @@ function App() {
 
   const addObject = useCallback((category, itemType) => {
     const newId = `${itemType}-${Date.now()}`
+    const spawnHeight = ['tableware', 'drinkware', 'flatware', 'decorative'].includes(category) ? 0.85 : 0
     const newObject = {
       id: newId,
       type: itemType,
       category,
       label: itemType,
-      position: [0, 0.5, 0],
+      position: [0, spawnHeight, 0],
       rotation: [0, 0, 0],
       scale: [1, 1, 1]
     }
