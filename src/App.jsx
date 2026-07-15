@@ -1,4 +1,4 @@
-import { useState, useRef } from 'react'
+import { useState, useCallback } from 'react'
 import Canvas3D from './components/Canvas3D'
 import TransformGizmo from './components/TransformGizmo'
 import CategoryPicker from './components/CategoryPicker'
@@ -50,10 +50,10 @@ function App() {
     return objects.filter(obj => obj.category === category && obj.type === itemType).length
   }
 
-  const handleSceneReady = (scene, camera) => {
+  const handleSceneReady = useCallback((scene, camera) => {
     setSceneRef(scene)
     setCameraRef(camera)
-  }
+  }, [])
 
   return (
     <div className="app">
