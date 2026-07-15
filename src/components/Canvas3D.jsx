@@ -98,14 +98,49 @@ const Canvas3D = forwardRef(({ objects, selectedObject, cameraPreset, aspectRati
       }
     }
 
+    const createCompositeCanvas = () => {
+      const composite = document.createElement('canvas')
+      composite.width = width * window.devicePixelRatio
+      composite.height = height * window.devicePixelRatio
+      const ctx = composite.getContext('2d')
+
+      // Draw 3D scene from renderer
+      ctx.drawImage(renderer.domElement, 0, 0, composite.width, composite.height)
+
+      // Draw labels
+      const labelCtx = labelCanvas.getContext('2d')
+      ctx.font = 'bold 14px Arial'
+      ctx.fillStyle = '#000'
+      ctx.textAlign = 'center'
+
+      scene.children.forEach((child) => {
+        if (child.userData.label) {
+          const vector = child.position.clone()
+          vector.project(camera)
+          const x = ((vector.x + 1) * composite.width) / 2
+          const y = (-(vector.y - 1) * composite.height) / 2
+
+          if (vector.z < 1) {
+            ctx.strokeStyle = '#fff'
+            ctx.lineWidth = 3
+            ctx.strokeText(child.userData.label, x, y)
+            ctx.fillStyle = '#000'
+            ctx.fillText(child.userData.label, x, y)
+          }
+        }
+      })
+
+      return composite
+    }
+
     const animate = () => {
       requestAnimationFrame(animate)
       updateCamera()
       renderer.render(scene, camera)
 
-      // Render labels
-      renderLabels(labelCanvas, camera, scene, width, height)
-      ref.current = labelCanvas
+      // Create composite canvas for export
+      const composite = createCompositeCanvas()
+      ref.current = composite
     }
 
     animate()
