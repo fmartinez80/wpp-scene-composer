@@ -1,8 +1,9 @@
-import { useState, useCallback } from 'react'
+import { useState, useCallback, useMemo } from 'react'
 import Canvas3D from './components/Canvas3D'
 import TransformGizmo from './components/TransformGizmo'
 import CategoryPicker from './components/CategoryPicker'
 import LayersPanel from './components/LayersPanel'
+import CameraPresets from './components/CameraPresets'
 import './App.css'
 
 function App() {
@@ -22,7 +23,7 @@ function App() {
   const [sceneRef, setSceneRef] = useState(null)
   const [cameraRef, setCameraRef] = useState(null)
 
-  const addObject = (category, itemType) => {
+  const addObject = useCallback((category, itemType) => {
     const newId = `${itemType}-${Date.now()}`
     const newObject = {
       id: newId,
@@ -33,22 +34,22 @@ function App() {
       rotation: [0, 0, 0],
       scale: [1, 1, 1]
     }
-    setObjects([...objects, newObject])
+    setObjects(objects => [...objects, newObject])
     setSelectedObjectId(newId)
-  }
+  }, [])
 
-  const deleteObject = (id) => {
-    setObjects(objects.filter(obj => obj.id !== id))
-    if (selectedObjectId === id) setSelectedObjectId(null)
-  }
+  const deleteObject = useCallback((id) => {
+    setObjects(objects => objects.filter(obj => obj.id !== id))
+    setSelectedObjectId(current => current === id ? null : current)
+  }, [])
 
-  const updateObject = (id, updates) => {
-    setObjects(objects.map(obj => obj.id === id ? { ...obj, ...updates } : obj))
-  }
+  const updateObject = useCallback((id, updates) => {
+    setObjects(objects => objects.map(obj => obj.id === id ? { ...obj, ...updates } : obj))
+  }, [])
 
-  const getCategoryCount = (category, itemType) => {
+  const getCategoryCount = useCallback((category, itemType) => {
     return objects.filter(obj => obj.category === category && obj.type === itemType).length
-  }
+  }, [objects])
 
   const handleSceneReady = useCallback((scene, camera) => {
     setSceneRef(scene)
@@ -99,8 +100,9 @@ function App() {
         )}
       </main>
 
-      {/* Right Panel - Layers */}
+      {/* Right Panel - Layers & Camera */}
       <aside className="right-panel">
+        <CameraPresets cameraRef={cameraRef} onCameraChange={() => {}} />
         <LayersPanel
           objects={objects}
           selectedObjectId={selectedObjectId}
