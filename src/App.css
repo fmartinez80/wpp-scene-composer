@@ -28,58 +28,66 @@ html, body, #root {
   padding: 0 16px;
   background: white;
   border-bottom: 1px solid #e0e0e0;
-  gap: 12px;
+  gap: 16px;
 }
 
 .toolbar-left, .toolbar-right {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 12px;
 }
 
-.scene-name-pill {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 6px 12px;
-  background: #f0f0f0;
-  border-radius: 20px;
+.file-name-label {
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  color: #999;
+  letter-spacing: 0.5px;
+  min-width: 65px;
+}
+
+.file-name-input {
   border: 1px solid #e0e0e0;
-}
-
-.scene-dot {
-  width: 8px;
-  height: 8px;
-  border-radius: 50%;
-  background: #0066cc;
-}
-
-.scene-name-input {
-  border: none;
-  background: transparent;
+  background: white;
+  padding: 8px 12px;
+  border-radius: 4px;
   font-size: 13px;
-  font-weight: 500;
-  min-width: 120px;
-  outline: none;
   color: #333;
+  outline: none;
+  transition: border-color 0.2s;
+  min-width: 200px;
 }
 
-.toolbar-icon {
-  width: 32px;
-  height: 32px;
-  border: none;
-  border-radius: 6px;
-  background: transparent;
+.file-name-input:focus {
+  border-color: #0066cc;
+}
+
+.toolbar-button {
+  padding: 8px 16px;
+  border: 1px solid #333;
+  background: #1a1a1a;
+  color: white;
+  border-radius: 4px;
   cursor: pointer;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 16px;
-  transition: background 0.2s;
+  font-size: 12px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  transition: all 0.2s;
 }
 
-.toolbar-icon:hover {
-  background: #f0f0f0;
+.toolbar-button:hover {
+  background: #333;
+  border-color: #666;
+}
+
+.toolbar-button.mode-toggle.active {
+  background: #0066cc;
+  border-color: #0066cc;
+}
+
+.toolbar-button.mode-toggle {
+  margin-left: auto;
 }
 
 /* Main layout */

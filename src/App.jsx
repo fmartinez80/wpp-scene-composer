@@ -20,9 +20,11 @@ function App() {
   })
   const [selectedObjectId, setSelectedObjectId] = useState('wood-table-init')
   const [sceneName, setSceneName] = useState('Untitled Scene')
+  const [fileName, setFileName] = useState('untitled_scene')
   const [sceneRef, setSceneRef] = useState(null)
   const [cameraRef, setCameraRef] = useState(null)
   const [getBoundingBox, setGetBoundingBox] = useState(null)
+  const [mode, setMode] = useState('compose') // 'compose' or 'preview'
 
   const addObject = useCallback((category, itemType) => {
     // For tables, replace the existing table instead of adding a new one
@@ -79,23 +81,23 @@ function App() {
       {/* Top Toolbar */}
       <header className="toolbar">
         <div className="toolbar-left">
-          <div className="scene-name-pill">
-            <div className="scene-dot"></div>
-            <input
-              type="text"
-              value={sceneName}
-              onChange={(e) => setSceneName(e.target.value)}
-              className="scene-name-input"
-            />
-          </div>
-          <button className="toolbar-icon" title="Save">💾</button>
-          <button className="toolbar-icon" title="Import">📦</button>
-          <button className="toolbar-icon" title="Add">➕</button>
+          <label className="file-name-label">FILE NAME</label>
+          <input
+            type="text"
+            value={fileName}
+            onChange={(e) => setFileName(e.target.value)}
+            className="file-name-input"
+            placeholder="untitled_scene"
+          />
+          <button className="toolbar-button" title="Load">LOAD</button>
+          <button className="toolbar-button" title="Save">SAVE</button>
         </div>
         <div className="toolbar-right">
-          <button className="toolbar-icon" title="Properties">🖌️</button>
-          <button className="toolbar-icon" title="Layers">📊</button>
-          <button className="toolbar-icon" title="Menu">☰</button>
+          <button className="toolbar-button" title="Export">EXPORT</button>
+          <button className={`toolbar-button mode-toggle ${mode === 'preview' ? 'active' : ''}`}
+                  onClick={() => setMode(mode === 'compose' ? 'preview' : 'compose')}>
+            {mode === 'compose' ? 'PREVIEW' : 'COMPOSE'}
+          </button>
         </div>
       </header>
 
