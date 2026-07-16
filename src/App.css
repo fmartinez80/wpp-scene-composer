@@ -85,24 +85,30 @@ html, body, #root {
 /* Main layout */
 .main-content {
   flex: 1;
-  display: flex;
   overflow: hidden;
   position: relative;
 }
 
 .canvas-3d {
-  flex: 1;
+  width: 100%;
+  height: 100%;
   background: linear-gradient(135deg, #f8f8f8 0%, #fafafa 100%);
 }
 
-/* Right panel */
+/* Right panel - overlay */
 .right-panel {
+  position: absolute;
+  top: 0;
+  right: 0;
   width: 280px;
+  height: 100%;
   background: white;
   border-left: 1px solid #e0e0e0;
   overflow-y: auto;
   display: flex;
   flex-direction: column;
+  box-shadow: -2px 0 8px rgba(0, 0, 0, 0.1);
+  z-index: 100;
 }
 
 /* Category footer */
