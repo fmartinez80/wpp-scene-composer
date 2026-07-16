@@ -25,20 +25,35 @@ function App() {
   const [getBoundingBox, setGetBoundingBox] = useState(null)
 
   const addObject = useCallback((category, itemType) => {
-    const newId = `${itemType}-${Date.now()}`
-    const spawnHeight = ['tableware', 'drinkware', 'flatware', 'decorative'].includes(category) ? 0.85 : 0
-    const newObject = {
-      id: newId,
-      type: itemType,
-      category,
-      label: itemType,
-      position: [0, spawnHeight, 0],
-      rotation: [0, 0, 0],
-      scale: [1, 1, 1]
+    // For tables, replace the existing table instead of adding a new one
+    if (category === 'tables') {
+      const currentTable = objects.find(obj => obj.category === 'tables')
+      if (currentTable) {
+        // Replace existing table
+        setObjects(objects => objects.map(obj =>
+          obj.id === currentTable.id
+            ? { ...obj, type: itemType, label: itemType }
+            : obj
+        ))
+        setSelectedObjectId(currentTable.id)
+      }
+    } else {
+      // Add new object for other categories
+      const newId = `${itemType}-${Date.now()}`
+      const spawnHeight = ['tableware', 'drinkware', 'flatware', 'decorative'].includes(category) ? 0.85 : 0
+      const newObject = {
+        id: newId,
+        type: itemType,
+        category,
+        label: itemType,
+        position: [0, spawnHeight, 0],
+        rotation: [0, 0, 0],
+        scale: [1, 1, 1]
+      }
+      setObjects(objects => [...objects, newObject])
+      setSelectedObjectId(newId)
     }
-    setObjects(objects => [...objects, newObject])
-    setSelectedObjectId(newId)
-  }, [])
+  }, [objects])
 
   const deleteObject = useCallback((id) => {
     setObjects(objects => objects.filter(obj => obj.id !== id))

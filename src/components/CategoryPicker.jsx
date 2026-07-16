@@ -2,6 +2,12 @@ import { useState } from 'react'
 import '../styles/CategoryPicker.css'
 
 const CATEGORIES = {
+  tables: {
+    icon: '🏠',
+    label: 'TABLE',
+    items: ['wood-table', 'marble-table', 'glass-table'],
+    isTable: true
+  },
   tableware: {
     icon: '🍽️',
     label: 'Tableware',
@@ -21,11 +27,6 @@ const CATEGORIES = {
     icon: '🪑',
     label: 'Furniture',
     items: ['chair', 'candle', 'vase']
-  },
-  tables: {
-    icon: '📦',
-    label: 'Tables',
-    items: ['wood-table', 'marble-table', 'glass-table']
   },
   shapes: {
     icon: '◻️',
