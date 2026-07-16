@@ -25,6 +25,9 @@ function App() {
   const [cameraRef, setCameraRef] = useState(null)
   const [getBoundingBox, setGetBoundingBox] = useState(null)
   const [mode, setMode] = useState('compose') // 'compose' or 'preview'
+  const [aspectRatio, setAspectRatio] = useState('16:9')
+  const [layersPanelVisible, setLayersPanelVisible] = useState(true)
+  const [cameraAngle, setCameraAngle] = useState(0)
 
   const addObject = useCallback((category, itemType) => {
     // For tables, replace the existing table instead of adding a new one
@@ -121,20 +124,62 @@ function App() {
         )}
       </main>
 
-      {/* Right Panel - Layers & Camera */}
-      <aside className="right-panel">
-        <CameraPresets cameraRef={cameraRef} onCameraChange={() => {}} />
-        <LayersPanel
-          objects={objects}
-          selectedObjectId={selectedObjectId}
-          onSelectObject={setSelectedObjectId}
-          onDeleteObject={deleteObject}
-        />
-      </aside>
+      {/* Right Panel - Layers & Camera (hidden in preview mode) */}
+      {mode === 'compose' && (
+        <aside className="right-panel">
+          <CameraPresets cameraRef={cameraRef} onCameraChange={() => {}} />
+          <LayersPanel
+            objects={objects}
+            selectedObjectId={selectedObjectId}
+            onSelectObject={setSelectedObjectId}
+            onDeleteObject={deleteObject}
+          />
+        </aside>
+      )}
 
-      {/* Bottom Category Picker */}
-      <footer className="category-footer">
-        <CategoryPicker onSelectItem={addObject} getCategoryCount={getCategoryCount} />
+      {/* Bottom Toolbar */}
+      <footer className="bottom-toolbar">
+        {/* Left: Layers Dropdown */}
+        <div className="toolbar-section left">
+          <select className="toolbar-dropdown layers-dropdown" onChange={(e) => setLayersPanelVisible(!layersPanelVisible)}>
+            <option>LAYERS</option>
+          </select>
+        </div>
+
+        {/* Center: Camera Angles (only in preview) */}
+        {mode === 'preview' && (
+          <div className="toolbar-section center camera-angles">
+            {[0, 15, 30, 45, 90].map((angle) => (
+              <button
+                key={angle}
+                className={`camera-angle-btn ${cameraAngle === angle ? 'active' : ''}`}
+                onClick={() => setCameraAngle(angle)}
+              >
+                <span className="angle-number">{angle}</span>
+                <span className="angle-label">
+                  {angle === 0 ? 'SIDE LEFT' : angle === 45 ? 'QUARTER LEFT' : angle === 90 ? 'SIDE RIGHT' : `${angle}°`}
+                </span>
+              </button>
+            ))}
+          </div>
+        )}
+
+        {/* Center: Category Picker (only in compose) */}
+        {mode === 'compose' && (
+          <div className="toolbar-section center">
+            <CategoryPicker onSelectItem={addObject} getCategoryCount={getCategoryCount} />
+          </div>
+        )}
+
+        {/* Right: Aspect Ratio Dropdown */}
+        <div className="toolbar-section right">
+          <select className="toolbar-dropdown aspect-ratio-dropdown" value={aspectRatio} onChange={(e) => setAspectRatio(e.target.value)}>
+            <option value="16:9">16:9</option>
+            <option value="4:3">4:3</option>
+            <option value="1:1">1:1</option>
+            <option value="9:16">9:16</option>
+          </select>
+        </div>
       </footer>
     </div>
   )
