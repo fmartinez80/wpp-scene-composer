@@ -22,6 +22,7 @@ function App() {
   const [sceneName, setSceneName] = useState('Untitled Scene')
   const [sceneRef, setSceneRef] = useState(null)
   const [cameraRef, setCameraRef] = useState(null)
+  const [getBoundingBox, setGetBoundingBox] = useState(null)
 
   const addObject = useCallback((category, itemType) => {
     const newId = `${itemType}-${Date.now()}`
@@ -52,9 +53,10 @@ function App() {
     return objects.filter(obj => obj.category === category && obj.type === itemType).length
   }, [])
 
-  const handleSceneReady = useCallback(({ scene, camera }) => {
+  const handleSceneReady = useCallback(({ scene, camera, getBoundingBox }) => {
     setSceneRef(scene)
     setCameraRef(camera)
+    setGetBoundingBox(() => getBoundingBox)
   }, [])
 
   return (
@@ -90,13 +92,14 @@ function App() {
           onSelectObject={setSelectedObjectId}
           onSceneReady={handleSceneReady}
         />
-        {selectedObjectId && sceneRef && cameraRef && (
+        {selectedObjectId && sceneRef && cameraRef && getBoundingBox && (
           <TransformGizmo
             selectedObjectId={selectedObjectId}
             objects={objects}
             onUpdateObject={updateObject}
             sceneRef={sceneRef}
             cameraRef={cameraRef}
+            getBoundingBox={getBoundingBox}
           />
         )}
       </main>

@@ -8,6 +8,7 @@ const Canvas3D = ({ objects, selectedObjectId, onSelectObject, onSceneReady }) =
   const cameraRef = useRef(null)
   const rendererRef = useRef(null)
   const objectsRef = useRef(new Map())
+  const boundingBoxesRef = useRef(new Map())
   const raycasterRef = useRef(new THREE.Raycaster())
   const mouseRef = useRef(new THREE.Vector2())
 
@@ -115,7 +116,8 @@ const Canvas3D = ({ objects, selectedObjectId, onSelectObject, onSceneReady }) =
 
     // Notify parent that scene is ready
     if (onSceneReady) {
-      onSceneReady({ scene, camera })
+      const getBoundingBox = (objectId) => boundingBoxesRef.current.get(objectId)
+      onSceneReady({ scene, camera, getBoundingBox })
     }
 
     // Cleanup
@@ -151,6 +153,10 @@ const Canvas3D = ({ objects, selectedObjectId, onSelectObject, onSceneReady }) =
         mesh.scale.fromArray(obj.scale)
         sceneRef.current.add(mesh)
         objectsRef.current.set(obj.id, mesh)
+
+        // Calculate bounding box
+        const bbox = new THREE.Box3().setFromObject(mesh)
+        boundingBoxesRef.current.set(obj.id, { min: bbox.min.clone(), max: bbox.max.clone() })
       } else {
         const mesh = objectsRef.current.get(obj.id)
         mesh.position.fromArray(obj.position)

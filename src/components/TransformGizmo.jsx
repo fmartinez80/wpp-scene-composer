@@ -1,7 +1,7 @@
 import { useEffect, useRef } from 'react'
 import * as THREE from 'three'
 
-const TransformGizmo = ({ selectedObjectId, objects, onUpdateObject, sceneRef, cameraRef }) => {
+const TransformGizmo = ({ selectedObjectId, objects, onUpdateObject, sceneRef, cameraRef, getBoundingBox }) => {
   const gizmoRef = useRef(null)
   const isDraggingRef = useRef(false)
   const raycasterRef = useRef(new THREE.Raycaster())
@@ -61,8 +61,16 @@ const TransformGizmo = ({ selectedObjectId, objects, onUpdateObject, sceneRef, c
     lft.userData.direction = [-1, 0]
     gizmo.add(lft)
 
-    // Position gizmo at object location, on the table surface
-    gizmo.position.set(selectedObj.position[0], selectedObj.position[1], selectedObj.position[2])
+    // Position gizmo above selected object
+    let gizmoY = selectedObj.position[1]
+    if (getBoundingBox) {
+      const bbox = getBoundingBox(selectedObjectId)
+      if (bbox) {
+        const objectHeight = bbox.max.y - bbox.min.y
+        gizmoY = selectedObj.position[1] + objectHeight / 2 + 0.15
+      }
+    }
+    gizmo.position.set(selectedObj.position[0], gizmoY, selectedObj.position[2])
     sceneRef.add(gizmo)
 
     // Mouse tracking
@@ -84,7 +92,7 @@ const TransformGizmo = ({ selectedObjectId, objects, onUpdateObject, sceneRef, c
         }
 
         onUpdateObject(selectedObjectId, { position: [intersection.x, selectedObj.position[1], intersection.z] })
-        gizmo.position.set(intersection.x, selectedObj.position[1], intersection.z)
+        gizmo.position.set(intersection.x, gizmoY, intersection.z)
       }
     }
 
@@ -112,7 +120,7 @@ const TransformGizmo = ({ selectedObjectId, objects, onUpdateObject, sceneRef, c
         sceneRef.remove(gizmoRef.current)
       }
     }
-  }, [selectedObjectId, objects, onUpdateObject, sceneRef, cameraRef])
+  }, [selectedObjectId, objects, onUpdateObject, sceneRef, cameraRef, getBoundingBox])
 
   return null
 }
